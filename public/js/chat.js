@@ -1,12 +1,26 @@
 let socket = io();
 
 function scrollToBottom() {
-    let message = document.querySelector('#message').lastElementChild;
+    let message = document.querySelector('#messages').lastElementChild;
     message.scrollIntoView();
 }
 
 socket.on('connect', () => {
-    console.log('Connected to server.');
+    let searchQuery = window.location.search.substring(1);
+    let params = JSON.parse(
+        '{"' +
+            decodeURI(searchQuery).replace(/&/g, '","').replace(/=/g, '":"') +
+            '"}'
+    );
+
+    socket.emit('join', params, (err) => {
+        if (err) {
+            alert(err);
+            window.location.href = '/';
+        } else {
+            console.log('No error');
+        }
+    });
 });
 socket.on('disconnect', () => {
     console.log('Disconnected from server.');
@@ -49,12 +63,24 @@ socket.on('newLocationMessage', (message) => {
     document.querySelector('#messages').appendChild(div);
 });
 
+socket.on('updateUsersList', (users) => {
+    let ol = document.createElement('ol');
+    users.forEach((user) => {
+        let li = document.createElement('li');
+        li.innerHTML = user;
+        ol.appendChild(li);
+    });
+
+    let usersList = document.querySelector('#users');
+    usersList.innerHTML = '';
+    usersList.appendChild(ol);
+});
+
 document.querySelector('#submit-btn').addEventListener('click', (e) => {
     e.preventDefault();
     socket.emit(
         'createMessage',
         {
-            from: 'User',
             text: document.querySelector('input[name="message"]').value,
         },
         () => {
